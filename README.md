@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alarm & Maintenance Management System
 
-## Getting Started
+## 1. ชื่อโครงการและวัตถุประสงค์
+- **ชื่อโครงการ:** Alarm & Maintenance Management System
+- **วัตถุประสงค์:** พัฒนา Web Application สำหรับใช้สนับสนุนงานด้าน Automation และงานบำรุงรักษาเครื่องจักรในโรงงาน
 
-First, run the development server:
+## 2. Function หลักและ Technology ที่ใช้
+**Function หลัก:**
+- ระบบ Authentication และ Role-based access (Admin / Technician)
+- ระบบจัดการข้อมูลเครื่องจักร (Machine Master - CRUD)
+- ระบบบันทึกและจัดการสถานะ Alarm และ Maintenance
+- ระบบค้นหาและกรองข้อมูล (Search & Filter)
+- หน้า Dashboard สรุปข้อมูลเครื่องจักรและงานซ่อมบำรุง
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Technology ที่ใช้:**
+- Frontend: Next.js, Tailwind CSS
+- Database & Auth: Supabase
+- Version Control: GitHub
+- CI/CD: GitHub Actions, Vercel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 3. Database Structure
+*(เดี๋ยวเรามาเติมโครงสร้างตาราง profiles, machines, alarms, maintenance_records ที่นี่ทีหลังครับ)*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 4. วิธีติดตั้งหรือใช้งาน (Getting Started)
+1. Clone repository นี้
+2. รันคำสั่ง `npm install` เพื่อติดตั้ง dependencies
+3. ตั้งค่าไฟล์ `.env.local` สำหรับเชื่อมต่อ Supabase (NEXT_PUBLIC_SUPABASE_URL และ NEXT_PUBLIC_SUPABASE_ANON_KEY)
+4. รันคำสั่ง `npm run dev` เพื่อเปิดเซิร์ฟเวอร์
+5. เปิดเบราว์เซอร์ไปที่ `http://localhost:3000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 5. Vercel URL
+*(รอใส่ Link หลังจากทำการ Deploy บน Vercel ใน Phase สุดท้ายครับ)*
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 6. รายละเอียดการใช้ AI ในการพัฒนา และส่วนที่ AI ช่วยสนับสนุน
+*(อธิบายสั้นๆ ว่าใช้ AI ตัวไหน เช่น ChatGPT/Gemini/GitHub Copilot ช่วยในขั้นตอนใดบ้าง เช่น วิเคราะห์ Requirement, ออกแบบฐานข้อมูล, เขียนโค้ดหน้า Login ฯลฯ)*

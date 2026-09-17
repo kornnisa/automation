@@ -26,7 +26,7 @@ Technology ที่ใช้ :
 - maintenance_records = บันทึกงานซ่อมบำรุง (`id`, `machine_id`, `details`, `created_at`)
 
 ## 4. วิธีติดตั้งหรือใช้งาน (Getting Started)
-1. Clone repository นี้
+1. โคลนโปรเจกต์ลงเครื่อง: `git clone <your-github-repo-url>`
 2. รันคำสั่ง `npm install` เพื่อติดตั้ง dependencies
 3. ตั้งค่าไฟล์ `.env.local` สำหรับเชื่อมต่อ Supabase (NEXT_PUBLIC_SUPABASE_URL และ NEXT_PUBLIC_SUPABASE_ANON_KEY)
 4. รันคำสั่ง `npm run dev` เพื่อเปิดเซิร์ฟเวอร์

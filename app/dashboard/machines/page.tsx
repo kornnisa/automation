@@ -12,21 +12,35 @@ export default function MachineMasterPage() {
   // Form States
   const [machineId, setMachineId] = useState('')
   const [machineName, setMachineName] = useState('')
-  const [machineType, setMachineType] = useState('') // เปลี่ยนเป็น Dropdown
-  const [location, setLocation] = useState('')       // เปลี่ยนเป็น Dropdown
+  const [machineType, setMachineType] = useState('')
+  const [location, setLocation] = useState('')
   const [status, setStatus] = useState('Stop')
   
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  // --- เพิ่ม State สำหรับ Search & Filter ---
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+
   useEffect(() => {
     fetchMachines()
-  }, [])
+  }, [searchTerm, filterStatus]) // ดึงข้อมูลใหม่ทุกครั้งที่พิมพ์ค้นหาหรือเปลี่ยนตัวกรอง
 
-  // [READ] ดึงข้อมูลเครื่องจักรทั้งหมด (แก้บั๊ก order by created_at ออก)
   const fetchMachines = async () => {
     setLoading(true)
-    // เปลี่ยนมาเรียงตาม machine_id แทน
-    const { data, error } = await supabase.from('machines').select('*').order('machine_id', { ascending: true })
+    
+    let query = supabase.from('machines').select('*').order('machine_id', { ascending: true })
+
+    // ใช้งาน Filter และ Search
+    if (filterStatus) {
+      query = query.eq('status', filterStatus)
+    }
+    if (searchTerm) {
+      // ค้นหาทั้งจาก ID และ ชื่อเครื่องจักร
+      query = query.or(`machine_id.ilike.%${searchTerm}%,machine_name.ilike.%${searchTerm}%`)
+    }
+
+    const { data, error } = await query
     if (error) {
       console.error('Error fetching machines:', error)
     } else {
@@ -35,7 +49,6 @@ export default function MachineMasterPage() {
     setLoading(false)
   }
 
-  // [CREATE & UPDATE] บันทึกข้อมูล
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -52,10 +65,7 @@ export default function MachineMasterPage() {
         .update({ machine_name: machineName, machine_type: machineType, location: location, status: status })
         .eq('id', editingId)
 
-      if (updateError) {
-        setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')
-        return
-      }
+      if (updateError) return setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')
       setSuccess('อัปเดตข้อมูลสำเร็จ!')
     } else {
       const { data: existing } = await supabase.from('machines').select('id').eq('machine_id', machineId)
@@ -68,10 +78,7 @@ export default function MachineMasterPage() {
         .from('machines')
         .insert([{ machine_id: machineId, machine_name: machineName, machine_type: machineType, location: location, status: status }])
 
-      if (insertError) {
-        setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
-        return
-      }
+      if (insertError) return setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
       setSuccess('เพิ่มข้อมูลเครื่องจักรสำเร็จ!')
     }
 
@@ -79,16 +86,11 @@ export default function MachineMasterPage() {
     fetchMachines()
   }
 
-  // [DELETE] ลบข้อมูล
   const handleDelete = async (id: string) => {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบเครื่องจักรนี้?')) return
-    
     const { error } = await supabase.from('machines').delete().eq('id', id)
-    if (error) {
-      alert('ไม่สามารถลบได้ (อาจมีข้อมูล Alarm/Maintenance ผูกอยู่)')
-    } else {
-      fetchMachines()
-    }
+    if (error) alert('ไม่สามารถลบได้ (อาจมีข้อมูลผูกอยู่)')
+    else fetchMachines()
   }
 
   const handleEdit = (machine: any) => {
@@ -116,6 +118,7 @@ export default function MachineMasterPage() {
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md border border-red-300">{error}</div>}
       {success && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md border border-green-300">{success}</div>}
 
+      {/* ฟอร์มกรอกข้อมูล (ซ่อนรายละเอียดไว้เหมือนเดิม) */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8">
         <h2 className="text-xl font-semibold mb-4">{editingId ? 'แก้ไขข้อมูลเครื่องจักร' : 'เพิ่มเครื่องจักรใหม่'}</h2>
         <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -127,12 +130,10 @@ export default function MachineMasterPage() {
             <label className="block text-sm font-medium mb-1">Machine Name *</label>
             <input type="text" value={machineName} onChange={e => setMachineName(e.target.value)} className="w-full border p-2 rounded" placeholder="e.g. CNC Machine A" />
           </div>
-          
-          {/* ส่วนที่เปลี่ยนเป็น Dropdown สำหรับ Type */}
           <div>
             <label className="block text-sm font-medium mb-1">Type</label>
             <select value={machineType} onChange={e => setMachineType(e.target.value)} className="w-full border p-2 rounded bg-white">
-              <option value="">-- เลือกประเภทเครื่องจักร --</option>
+              <option value="">-- เลือกประเภท --</option>
               <option value="CNC">CNC</option>
               <option value="Robot Arm">Robot Arm</option>
               <option value="Conveyor">Conveyor</option>
@@ -140,19 +141,16 @@ export default function MachineMasterPage() {
               <option value="Other">Other</option>
             </select>
           </div>
-
-          {/* ส่วนที่เปลี่ยนเป็น Dropdown สำหรับ Location */}
           <div>
             <label className="block text-sm font-medium mb-1">Location</label>
             <select value={location} onChange={e => setLocation(e.target.value)} className="w-full border p-2 rounded bg-white">
-              <option value="">-- เลือกโซน/พื้นที่ --</option>
+              <option value="">-- เลือกโซน --</option>
               <option value="Zone A">Zone A</option>
               <option value="Zone B">Zone B</option>
               <option value="Zone C">Zone C</option>
               <option value="Warehouse">Warehouse</option>
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium mb-1">Status</label>
             <select value={status} onChange={e => setStatus(e.target.value)} className="w-full border p-2 rounded bg-white">
@@ -175,6 +173,33 @@ export default function MachineMasterPage() {
         </form>
       </div>
 
+      {/* --- ส่วนหัวของตาราง พร้อมกล่อง Search & Filter มุมขวาบน --- */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+        <h2 className="text-xl font-semibold text-gray-800">รายการเครื่องจักรทั้งหมด</h2>
+        
+        <div className="flex gap-2 w-full md:w-auto">
+          <input 
+            type="text" 
+            placeholder="ค้นหา ID หรือ ชื่อเครื่องจักร..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="border p-2 rounded w-full md:w-64 shadow-sm"
+          />
+          <select 
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="border p-2 rounded w-full md:w-40 shadow-sm bg-white"
+          >
+            <option value="">ทุกสถานะ</option>
+            <option value="Running">Running</option>
+            <option value="Stop">Stop</option>
+            <option value="Alarm">Alarm</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ตารางแสดงข้อมูล */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-800 text-white">
@@ -191,7 +216,7 @@ export default function MachineMasterPage() {
             {loading ? (
               <tr><td colSpan={6} className="p-4 text-center">กำลังโหลดข้อมูล...</td></tr>
             ) : machines.length === 0 ? (
-              <tr><td colSpan={6} className="p-4 text-center">ยังไม่มีข้อมูลเครื่องจักร</td></tr>
+              <tr><td colSpan={6} className="p-4 text-center">ไม่พบข้อมูลเครื่องจักรที่ค้นหา</td></tr>
             ) : (
               machines.map((m) => (
                 <tr key={m.id} className="border-b hover:bg-gray-50">

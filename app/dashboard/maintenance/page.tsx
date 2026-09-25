@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity'
 
 export default function MaintenancePage() {
   const [records, setRecords] = useState<any[]>([])
@@ -15,10 +16,38 @@ export default function MaintenancePage() {
   const [details, setDetails] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  // สถานะสำหรับโหมด "ปิดงาน" (มาจากปุ่ม Resolve ใน Task Board)
+  const [prefillMachine, setPrefillMachine] = useState('')
+  const [prefillAlarmId, setPrefillAlarmId] = useState('')
+  const [prefillAlarmCode, setPrefillAlarmCode] = useState('')
+  const [notice, setNotice] = useState('')
+
   useEffect(() => {
+    // อ่านพารามิเตอร์จาก URL เช่น ?machine=xxx&alarm=yyy
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('machine')) setPrefillMachine(params.get('machine')!)
+    if (params.get('alarm')) setPrefillAlarmId(params.get('alarm')!)
     fetchMachines()
     fetchRecords()
   }, [])
+
+  // เมื่อโหลดรายชื่อเครื่องเสร็จ ให้นำเครื่องจาก URL ไปตั้งในฟอร์ม + แจ้งโหมดปิดงาน
+  useEffect(() => {
+    if (prefillMachine && machines.length && !selectedMachine) {
+      if (machines.some(m => m.id === prefillMachine)) setSelectedMachine(prefillMachine)
+      if (prefillAlarmId && !notice) {
+        supabase
+          .from('alarms')
+          .select('alarm_code, machines(machine_id, machine_name)')
+          .eq('id', prefillAlarmId)
+          .single()
+          .then(({ data }) => {
+            setPrefillAlarmCode(data?.alarm_code || '')
+            setNotice(data ? `กำลังปิดงาน ${data.alarm_code} (${data.machines?.machine_id}) — บันทึกการซ่อมด้านล่างเพื่อปิดงานอัตโนมัติ` : '')
+          })
+      }
+    }
+  }, [machines, prefillMachine])
 
   // ดึงข้อมูลเครื่องจักรสำหรับ Dropdown
   const fetchMachines = async () => {
@@ -51,25 +80,71 @@ export default function MaintenancePage() {
       return
     }
 
+    // ดึง ID ผู้ใช้ที่ล็อกอิน (ผู้ที่ปิดงาน/บันทึกการซ่อม)
+    const { data: { user } } = await supabase.auth.getUser()
+    const technicianId = user?.id || null
+
     const payload = {
       machine_id: selectedMachine,
       details: details,
-      // หมายเหตุ: ในระบบจริง อาจจะมีการดึง ID ของ Technician ที่ล็อกอินอยู่มาใส่ด้วย 
-      // แต่เพื่อให้ทดสอบ CRUD ได้ง่าย เราจะโฟกัสที่รายละเอียดและเครื่องจักรก่อนครับ
+      technician_id: technicianId
     }
+
+    // ชื่อเครื่อง (code) สำหรับบันทึกลง Log
+    const mach = machines.find(x => x.id === selectedMachine)
 
     if (editingId) {
       const { error: updateError } = await supabase.from('maintenance_records').update(payload).eq('id', editingId)
       if (updateError) return setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')
+      await logActivity({
+        action: 'edit',
+        details,
+        machine_code: mach?.machine_id,
+        machine_name: mach?.machine_name,
+      })
       setSuccess('อัปเดตข้อมูลซ่อมบำรุงสำเร็จ!')
     } else {
       const { error: insertError } = await supabase.from('maintenance_records').insert([payload])
       if (insertError) return setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      await logActivity({
+        action: 'add',
+        details,
+        machine_code: mach?.machine_id,
+        machine_name: mach?.machine_name,
+        alarm_code: prefillAlarmCode || undefined,
+      })
       setSuccess('เพิ่มประวัติการซ่อมบำรุงสำเร็จ!')
+
+      // ถ้าเข้ามาในโหมดปิดงาน (มี alarm ต่อท้าย URL) → ปิด Alarm + ซิงก์สถานะเครื่อง
+      if (prefillAlarmId) {
+        await supabase.from('alarms').update({ status: 'Closed', resolved_at: new Date().toISOString() }).eq('id', prefillAlarmId)
+        await syncMachineStatus(selectedMachine)
+        window.history.replaceState({}, '', '/dashboard/maintenance')
+        setPrefillAlarmId('')
+        setPrefillAlarmCode('')
+        setNotice('')
+        setSuccess('ปิดงานเรียบร้อย! บันทึกการซ่อมถูกบันทึกและ Alarm ถูกปิดอัตโนมัติ')
+      }
     }
 
     resetForm()
     fetchRecords()
+  }
+
+  // ซิงก์สถานะเครื่องตาม Alarm ที่ค้างอยู่
+  const syncMachineStatus = async (machineId: string) => {
+    if (!machineId) return
+    const { data } = await supabase
+      .from('alarms')
+      .select('status')
+      .eq('machine_id', machineId)
+      .in('status', ['Open', 'In Progress'])
+
+    let newStatus = 'Running'
+    if (data && data.length > 0) {
+      newStatus = data.some(a => a.status === 'In Progress') ? 'Maintenance' : 'Alarm'
+    }
+    await supabase.from('machines').update({ status: newStatus }).eq('id', machineId)
   }
 
   const handleEdit = (record: any) => {
@@ -90,6 +165,12 @@ export default function MaintenancePage() {
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
       {success && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">{success}</div>}
+      {notice && (
+        <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-md">
+          <p className="font-black text-blue-800 uppercase tracking-wide text-sm">โหมดปิดงาน</p>
+          <p className="text-blue-700 text-sm font-semibold mt-1">{notice}</p>
+        </div>
+      )}
 
       {/* ส่วนฟอร์มบันทึกข้อมูล */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-500">
@@ -149,7 +230,7 @@ export default function MaintenancePage() {
                   <td className="p-3 font-medium text-blue-700">{r.machines?.machine_id}</td>
                   <td className="p-3 whitespace-pre-wrap">{r.details}</td>
                   <td className="p-3">
-                    <button onClick={() => handleEdit(r)} className="text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleEdit(r)} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-colors">Edit</button>
                   </td>
                 </tr>
               ))

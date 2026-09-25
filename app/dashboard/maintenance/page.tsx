@@ -41,9 +41,9 @@ export default function MaintenancePage() {
           .select('alarm_code, machines(machine_id, machine_name)')
           .eq('id', prefillAlarmId)
           .single()
-          .then(({ data }) => {
+          .then(({ data }: { data: { alarm_code?: string; machines?: { machine_id?: string; machine_name?: string }[] | null } | null }) => {
             setPrefillAlarmCode(data?.alarm_code || '')
-            setNotice(data ? `กำลังปิดงาน ${data.alarm_code} (${data.machines?.machine_id}) — บันทึกการซ่อมด้านล่างเพื่อปิดงานอัตโนมัติ` : '')
+            setNotice(data ? `กำลังปิดงาน ${data.alarm_code} (${data.machines?.[0]?.machine_id ?? ''}) — บันทึกการซ่อมด้านล่างเพื่อปิดงานอัตโนมัติ` : '')
           })
       }
     }

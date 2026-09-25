@@ -232,7 +232,6 @@ export default function MachineMasterPage() {
 
       {/* --- ส่วนหัวของตาราง พร้อมกล่อง Search & Filter มุมขวาบน --- */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-        <h2 className="text-xl font-semibold text-gray-800">รายการเครื่องจักรทั้งหมด</h2>
         
         <div className="flex gap-2 w-full md:w-auto">
           <input 

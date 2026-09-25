@@ -75,9 +75,19 @@ export default function MachineMasterPage() {
     }
 
     if (editingId) {
+      const { data: dup } = await supabase
+        .from('machines')
+        .select('id')
+        .eq('machine_id', machineId)
+        .neq('id', editingId)
+      if (dup && dup.length > 0) {
+        setError(`Machine ID "${machineId}" มีอยู่ในระบบแล้ว ห้ามซ้ำ`)
+        return
+      }
+
       const { error: updateError } = await supabase
         .from('machines')
-        .update({ machine_name: machineName, machine_type: machineType, location: location, status: status })
+        .update({ machine_id: machineId, machine_name: machineName, machine_type: machineType, location: location, status: status })
         .eq('id', editingId)
 
       if (updateError) return setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')
@@ -169,7 +179,7 @@ export default function MachineMasterPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-[68rem] mx-auto">
       <h1 className="text-3xl font-bold mb-6">Machine Master</h1>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md border border-red-300">{error}</div>}
@@ -181,7 +191,7 @@ export default function MachineMasterPage() {
         <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Machine ID *</label>
-            <input type="text" value={machineId} onChange={e => setMachineId(e.target.value)} disabled={!!editingId} className="w-full border p-2 rounded disabled:bg-gray-200" placeholder="e.g. MCH-001" />
+            <input type="text" value={machineId} onChange={e => setMachineId(e.target.value)} className="w-full border p-2 rounded" placeholder="e.g. MCH-001" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Machine Name *</label>
@@ -257,15 +267,15 @@ export default function MachineMasterPage() {
 
       {/* ตารางแสดงข้อมูล */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse table-fixed">
           <thead className="bg-gray-800 text-white">
             <tr>
-              <th className="p-3">Machine ID</th>
-              <th className="p-3">Name</th>
-              <th className="p-3">Type</th>
-              <th className="p-3">Location</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
+              <th className="p-3 w-1/6">Machine ID</th>
+              <th className="p-3 w-1/6">Name</th>
+              <th className="p-3 w-1/6">Type</th>
+              <th className="p-3 w-1/6">Location</th>
+              <th className="p-3 w-1/6">Status</th>
+              <th className="p-3 w-1/6">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -276,12 +286,12 @@ export default function MachineMasterPage() {
             ) : (
               machines.map((m) => (
                 <tr key={m.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{m.machine_id}</td>
-                  <td className="p-3">{m.machine_name}</td>
-                  <td className="p-3">{m.machine_type || '-'}</td>
-                  <td className="p-3">{m.location || '-'}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs text-white ${
+                  <td className="p-3 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{m.machine_id}</td>
+                  <td className="p-3 whitespace-nowrap overflow-hidden text-ellipsis">{m.machine_name}</td>
+                  <td className="p-3 whitespace-nowrap overflow-hidden text-ellipsis">{m.machine_type || '-'}</td>
+                  <td className="p-3 whitespace-nowrap overflow-hidden text-ellipsis">{m.location || '-'}</td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded text-xs text-white inline-block ${
                       m.status === 'Running' ? 'bg-green-500' : 
                       m.status === 'Stop' ? 'bg-gray-500' : 
                       m.status === 'Alarm' ? 'bg-red-500' : 'bg-orange-500'
@@ -289,11 +299,11 @@ export default function MachineMasterPage() {
                       {m.status}
                     </span>
                   </td>
-                  <td className="p-3 flex gap-2">
-                    <div className="flex gap-2">
-                    <button onClick={() => handleEdit(m)} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-colors">Edit</button>
-                    <button onClick={() => setDeleteTarget(m)} className="bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded text-sm font-bold transition-colors">Delete</button>
-                  </div>
+                  <td className="p-3">
+                    <div className="flex gap-2 justify-center">
+                      <button onClick={() => handleEdit(m)} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-colors whitespace-nowrap">Edit</button>
+                      <button onClick={() => setDeleteTarget(m)} className="bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded text-sm font-bold transition-colors whitespace-nowrap">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))

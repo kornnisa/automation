@@ -23,20 +23,25 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // เรียกใช้ Supabase เพื่อ Login
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      // เรียกใช้ Supabase เพื่อ Login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      // ถ้ายืนยันตัวตนสำเร็จ ให้เปลี่ยนหน้าไปที่ Dashboard
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // ถ้ายืนยันตัวตนสำเร็จ ให้เปลี่ยนหน้าไปที่ Dashboard
-    router.push('/dashboard')
   }
 
   return (

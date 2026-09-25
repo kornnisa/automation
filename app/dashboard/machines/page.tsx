@@ -2,6 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity'
+
+// ไอคอนสามเหลี่ยมเตือน (SVG สไตล์อุตสาหกรรม)
+function IconAlert({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 3 2.5 19.5h19L12 3Z" />
+      <path d="M12 9.5v4.5" />
+    </svg>
+  )
+}
 
 export default function MachineMasterPage() {
   const [machines, setMachines] = useState<any[]>([])
@@ -21,6 +32,10 @@ export default function MachineMasterPage() {
   // --- เพิ่ม State สำหรับ Search & Filter ---
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+
+  // --- สถานะสำหรับ Modal ยืนยันการลบ ---
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchMachines()
@@ -66,6 +81,12 @@ export default function MachineMasterPage() {
         .eq('id', editingId)
 
       if (updateError) return setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')
+      await logActivity({
+        action: 'machineEdit',
+        details: `แก้ไขข้อมูล ${machineId} (${machineName})`,
+        machine_code: machineId,
+        machine_name: machineName,
+      })
       setSuccess('อัปเดตข้อมูลสำเร็จ!')
     } else {
       const { data: existing } = await supabase.from('machines').select('id').eq('machine_id', machineId)
@@ -79,6 +100,12 @@ export default function MachineMasterPage() {
         .insert([{ machine_id: machineId, machine_name: machineName, machine_type: machineType, location: location, status: status }])
 
       if (insertError) return setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      await logActivity({
+        action: 'machine',
+        details: `เพิ่มเครื่องจักรใหม่ ${machineId} (${machineName})`,
+        machine_code: machineId,
+        machine_name: machineName,
+      })
       setSuccess('เพิ่มข้อมูลเครื่องจักรสำเร็จ!')
     }
 
@@ -86,11 +113,41 @@ export default function MachineMasterPage() {
     fetchMachines()
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบเครื่องจักรนี้?')) return
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    setDeleting(true)
+    setError('')
+    setSuccess('')
+
+    const id = deleteTarget.id
+    // ลบข้อมูลที่ผูกอยู่กับเครื่องก่อน (เพราะมี Foreign Key ค้าง)
+    const { error: alarmErr } = await supabase.from('alarms').delete().eq('machine_id', id)
+    const { error: maintErr } = await supabase.from('maintenance_records').delete().eq('machine_id', id)
+
+    if (alarmErr || maintErr) {
+      setError('ไม่สามารถลบข้อมูลที่เกี่ยวข้องได้ (Alarm / Maintenance)')
+      setDeleting(false)
+      setDeleteTarget(null)
+      return
+    }
+
     const { error } = await supabase.from('machines').delete().eq('id', id)
-    if (error) alert('ไม่สามารถลบได้ (อาจมีข้อมูลผูกอยู่)')
-    else fetchMachines()
+    if (error) {
+      setError('ไม่สามารถลบเครื่องจักรได้')
+    } else {
+      await logActivity({
+        action: 'machineDelete',
+        details: `ลบเครื่องจักร ${deleteTarget.machine_id} (${deleteTarget.machine_name})`,
+        machine_code: deleteTarget.machine_id,
+        machine_name: deleteTarget.machine_name,
+      })
+      setSuccess(`ลบเครื่องจักร ${deleteTarget.machine_id} แล้ว`)
+      fetchMachines()
+    }
+
+    setDeleting(false)
+    setDeleteTarget(null)
   }
 
   const handleEdit = (machine: any) => {
@@ -234,8 +291,10 @@ export default function MachineMasterPage() {
                     </span>
                   </td>
                   <td className="p-3 flex gap-2">
-                    <button onClick={() => handleEdit(m)} className="text-blue-600 hover:underline">Edit</button>
-                    <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:underline">Delete</button>
+                    <div className="flex gap-2">
+                    <button onClick={() => handleEdit(m)} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-colors">Edit</button>
+                    <button onClick={() => setDeleteTarget(m)} className="bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded text-sm font-bold transition-colors">Delete</button>
+                  </div>
                   </td>
                 </tr>
               ))
@@ -243,6 +302,48 @@ export default function MachineMasterPage() {
           </tbody>
         </table>
       </div>
+
+      {/* --- Modal ยืนยันการลบ --- */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden border-t-4 border-red-600">
+            {/* หัว Modal */}
+            <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex items-center gap-3">
+              <IconAlert className="h-5 w-5 text-red-600 shrink-0" />
+              <h3 className="text-lg font-black text-red-700 uppercase tracking-wide">ลบเครื่องจักร</h3>
+            </div>
+
+            {/* เนื้อหา */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-gray-700 font-semibold">
+                ต้องการลบเครื่อง
+                <span className="mx-1.5 px-2 py-0.5 bg-gray-900 text-white font-black rounded text-sm tracking-wide">{deleteTarget.machine_id}</span>
+                ({deleteTarget.machine_name}) หรือไม่?
+              </p>
+            </div>
+
+            {/* ปุ่ม */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="bg-gray-500 hover:bg-gray-600 disabled:opacity-40 text-white font-black uppercase tracking-wide px-5 py-2 rounded text-sm"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-black uppercase tracking-wide px-5 py-2 rounded text-sm"
+                >
+                  {deleting ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

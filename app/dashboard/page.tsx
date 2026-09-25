@@ -96,26 +96,6 @@ function Led({ color, onClick }: { color: string; onClick?: () => void }) {
 }
 
 // นาฬิกาสด (ช่วงเวลาทำงานจริง)
-function LiveClock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  return (
-    <div className="flex items-center gap-4 text-xs font-mono">
-      <div className="flex items-center gap-2">
-        <Led color="bg-green-400" />
-        <span className="text-green-300 font-bold tracking-widest">SYSTEM ONLINE</span>
-      </div>
-      <span className="text-gray-400 tracking-wider">
-        {now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}{' '}
-        {now.toLocaleTimeString('en-GB', { hour12: false })}
-      </span>
-    </div>
-  )
-}
-
 // ---------- บล็อกเครื่องในผังโรงงาน (ปุ่มกดดูรายละเอียด) ----------
 function MachineBlock({ m, active, onClick }: { m: any; active: any; onClick: () => void }) {
   const s = m.status
@@ -340,14 +320,16 @@ function TechnicianTaskView() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 uppercase tracking-wide">Technician</h1>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={refreshing}
-          className="bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-60 text-sm font-bold tracking-wider uppercase px-4 py-2 rounded-md shadow-sm transition-colors flex items-center gap-2"
-        >
-          <IconRefresh className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchData}
+            disabled={refreshing}
+            className="bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-60 text-sm font-bold tracking-wider uppercase px-4 py-2 rounded-md shadow-sm transition-colors flex items-center gap-2"
+          >
+            <IconRefresh className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* --- Layout แนว: สรุปจำนวนเครื่อง + Alarm | Activity Log --- */}
@@ -364,8 +346,8 @@ function TechnicianTaskView() {
               <IconFactory className="h-5 w-5 text-white shrink-0" />
               <h2 className="text-lg font-black text-white uppercase tracking-wide truncate">Machine</h2>
             </div>
-            <div className="bg-white w-28 px-4 py-4 flex items-center justify-center border-l border-blue-700">
-              <p className="text-5xl font-black text-gray-900 tabular-nums leading-none">{machines.length}</p>
+            <div className="bg-white w-24 px-3 py-4 flex items-center justify-center border-l border-blue-700">
+              <p className="text-4xl font-black text-gray-900 tabular-nums leading-none">{machines.length}</p>
             </div>
           </div>
         </button>
@@ -426,7 +408,6 @@ function TechnicianTaskView() {
             <IconActivity className="h-5 w-5 text-gray-700" />
             <div>
               <h2 className="text-lg font-black text-gray-900 uppercase tracking-wide">Activity Log</h2>
-              <p className="text-xs font-bold text-gray-400 tracking-wide">บันทึกการทำงานทั้งหมดของระบบ</p>
             </div>
           </div>
           <Link
@@ -704,17 +685,7 @@ function AdminDashboardView() {
   const T = statusTheme
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-
-      {/* --- 0. แถบสถานะระบบ (System Bar) --- */}
-      <div className="bg-gray-900 text-white px-5 py-3 rounded-md flex flex-wrap items-center justify-between gap-3 shadow">
-        <div className="flex items-center gap-2">
-          <span className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center">
-            <IconFactory className="h-5 w-5 text-white" />
-          </span>
-        </div>
-        <LiveClock />
-      </div>
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
 
       {/* --- 2. หัวข้อหน้าพร้อมปุ่มรีเฟรช --- */}
       <div className="flex justify-between items-center pt-2">
@@ -732,8 +703,8 @@ function AdminDashboardView() {
               <IconFactory className="h-5 w-5 text-white shrink-0" />
               <h2 className="text-lg font-black text-white uppercase tracking-wide truncate">Machine</h2>
             </div>
-            <div className="bg-white w-28 px-4 py-4 flex items-center justify-center border-l border-blue-700">
-              <p className="text-5xl font-black text-gray-900 tabular-nums leading-none">{stats.total}</p>
+            <div className="bg-white w-24 px-3 py-4 flex items-center justify-center border-l border-blue-700">
+              <p className="text-4xl font-black text-gray-900 tabular-nums leading-none">{stats.total}</p>
             </div>
           </div>
         </button>
@@ -745,8 +716,8 @@ function AdminDashboardView() {
                 <IconWrench className="h-5 w-5 text-white shrink-0" />
                 <h2 className="text-lg font-black text-white uppercase tracking-wide truncate">อยู่ระหว่างซ่อม</h2>
               </div>
-              <div className="bg-white w-28 px-4 py-4 flex items-center justify-center border-l border-orange-500">
-                <p className="text-5xl font-black text-gray-900 tabular-nums leading-none">{stats.maintenance}</p>
+              <div className="bg-white w-24 px-3 py-4 flex items-center justify-center border-l border-orange-500">
+                <p className="text-4xl font-black text-gray-900 tabular-nums leading-none">{stats.maintenance}</p>
               </div>
             </div>
           </div>
@@ -759,8 +730,8 @@ function AdminDashboardView() {
                 <IconPower className="h-5 w-5 text-white shrink-0" />
                 <h2 className="text-lg font-black text-white uppercase tracking-wide truncate">เครื่องที่หยุดทำงาน</h2>
               </div>
-              <div className="bg-white w-28 px-4 py-4 flex items-center justify-center border-l border-gray-600">
-                <p className="text-5xl font-black text-gray-900 tabular-nums leading-none">{stats.stopped}</p>
+              <div className="bg-white w-24 px-3 py-4 flex items-center justify-center border-l border-gray-600">
+                <p className="text-4xl font-black text-gray-900 tabular-nums leading-none">{stats.stopped}</p>
               </div>
             </div>
           </div>
@@ -824,25 +795,24 @@ function AdminDashboardView() {
               <IconActivity className="h-5 w-5 text-gray-700" />
               <div>
                 <h2 className="text-lg font-black text-gray-900 uppercase tracking-wide">Activity Log</h2>
-                <p className="text-xs font-bold text-gray-400 tracking-wide">บันทึกการทำงานทั้งหมดของระบบ</p>
-              </div>
             </div>
-            <Link
-              href="/dashboard/reports"
-              className="inline-flex items-center border-2 border-gray-300 hover:border-blue-600 bg-white px-3 py-1.5 rounded text-sm font-black text-gray-700 hover:text-blue-700 uppercase tracking-wide shadow-sm transition-colors"
-            >
-              History Log
-            </Link>
           </div>
-          <div className="p-5 flex-1">
-            {recentActivities.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">ยังไม่มีการบันทึกการทำงานในระบบ</p>
-            ) : (
-              <div className="relative border-l-2 border-gray-200 ml-3 space-y-6 pb-4">
-                {recentActivities.map((act, index) => (
-                  <ActivityRow key={index} act={act} />
-                ))}
-              </div>
+          <Link
+            href="/dashboard/reports"
+            className="inline-flex items-center border-2 border-gray-300 hover:border-blue-600 bg-white px-3 py-1.5 rounded text-sm font-black text-gray-700 hover:text-blue-700 uppercase tracking-wide shadow-sm transition-colors"
+          >
+            History Log
+          </Link>
+        </div>
+        <div className="p-5 flex-1">
+          {recentActivities.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">ยังไม่มีการบันทึกการทำงานในระบบ</p>
+          ) : (
+            <div className="relative border-l-2 border-gray-200 ml-3 space-y-6 pb-4">
+              {recentActivities.map((act, index) => (
+                <ActivityRow key={index} act={act} />
+              ))}
+            </div>
             )}
           </div>
         </div>

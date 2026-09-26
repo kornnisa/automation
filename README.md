@@ -1,7 +1,6 @@
-# Alarm & Maintenance Management System
 
 ## 1. ชื่อโครงการและวัตถุประสงค์
-- ชื่อโครงการ : Alarm & Maintenance Management System
+- ชื่อโครงการ :  Management System
 - วัตถุประสงค์ : พัฒนา Web Application สำหรับใช้สนับสนุนงานด้าน Automation และงานบำรุงรักษาเครื่องจักรในโรงงาน
 
 ## 2. Function หลักและ Technology ที่ใช้
